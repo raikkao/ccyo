@@ -1159,7 +1159,11 @@ abstract contract Pausable is Context {
 
 pragma solidity ^0.6.12;
 
+contract IWhitelist {
+    function isWhitelisted(address _address) public view returns(bool) {}
+}
 
+pragma solidity ^0.6.12
 
 contract StratManager is Ownable, Pausable {
     /**
@@ -1169,6 +1173,7 @@ contract StratManager is Ownable, Pausable {
      * {unirouter} - Address of exchange to execute swaps.
      */
     address public keeper;
+    address public whitelist;
     address public unirouter;
     address public vault;
     address public feeRecipient;
@@ -1182,14 +1187,22 @@ contract StratManager is Ownable, Pausable {
      */
     constructor(
         address _keeper,
+        address _whitelist,
         address _unirouter,
         address _vault,
         address _feeRecipient
     ) public {
         keeper = _keeper;
+        whitelist = _whitelist;
         unirouter = _unirouter;
         vault = _vault;
         feeRecipient = _feeRecipient;
+    }
+
+    // checks that caller is either owner or keeper.
+    modifier onlyWhitelist() {
+        require(msg.sender == owner() || msg.sender == keeper || IWhitelist(_keeper).isWhitelisted(msg.sender), "!manager");
+        _;
     }
 
     // checks that caller is either owner or keeper.
@@ -1275,17 +1288,13 @@ abstract contract FeeManager is StratManager {
     }
 }
 
+
+
+
 // File: contracts/BIFI/strategies/Curve/StrategyCurveLP.sol
 
 
 pragma solidity ^0.6.0;
-
-
-
-
-
-
-
 
 
 contract StrategyCurveLP is StratManager, FeeManager {
@@ -1383,8 +1392,7 @@ contract StrategyCurveLP is StratManager, FeeManager {
     }
 
     // compounds earnings and charges performance fee
-    function harvest() public whenNotPaused {
-        require(tx.origin == msg.sender || msg.sender == vault, "!contract");
+    function harvest() public whenNotPaused onlyWhitelist {
         IRewardsGauge(rewardsGauge).claim_rewards(address(this));
 
         uint256 crvBal = IERC20(crv).balanceOf(address(this));

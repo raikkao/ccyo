@@ -1225,41 +1225,51 @@ interface IVToken is IERC20 {
 
 pragma solidity ^0.6.12;
 
+contract ICCFarmers {
+    function isWhitelisted(address _address) public view returns(bool) {}
+}
+
+
+pragma solidity ^0.6.12;
 
 contract StratManager is Ownable, Pausable {
     /**
      * @dev Beefy Contracts:
      * {keeper} - Address to manage a few lower risk features of the strat
-     * {strategist} - Address of the strategy author/deployer where strategist fee will go.
      * {vault} - Address of the vault that controls the strategy's funds.
      * {unirouter} - Address of exchange to execute swaps.
      */
     address public keeper;
-    address public strategist;
+    address public whitelist;
     address public unirouter;
     address public vault;
-    address public beefyFeeRecipient;
+    address public feeRecipient;
 
     /**
      * @dev Initializes the base strategy.
      * @param _keeper address to use as alternative owner.
-     * @param _strategist address where strategist fees go.
      * @param _unirouter router to use for swaps
      * @param _vault address of parent vault.
-     * @param _beefyFeeRecipient address where to send Beefy's fees.
+     * @param _feeRecipient address where to send Beefy's fees.
      */
     constructor(
         address _keeper,
-        address _strategist,
+        address _whitelist,
         address _unirouter,
         address _vault,
-        address _beefyFeeRecipient
+        address _feeRecipient
     ) public {
         keeper = _keeper;
-        strategist = _strategist;
+        whitelist = _whitelist;
         unirouter = _unirouter;
         vault = _vault;
-        beefyFeeRecipient = _beefyFeeRecipient;
+        feeRecipient = _feeRecipient;
+    }
+
+    // checks that caller is either owner or keeper.
+    modifier onlyWhitelist() {
+        require(msg.sender == owner() || msg.sender == keeper || ICCFarmers(_keeper).isWhitelisted(msg.sender), "!manager");
+        _;
     }
 
     // checks that caller is either owner or keeper.
@@ -1283,15 +1293,6 @@ contract StratManager is Ownable, Pausable {
     }
 
     /**
-     * @dev Updates address where strategist fee earnings will go.
-     * @param _strategist new strategist address.
-     */
-    function setStrategist(address _strategist) external {
-        require(msg.sender == strategist, "!strategist");
-        strategist = _strategist;
-    }
-
-    /**
      * @dev Updates router that will be used for swaps.
      * @param _unirouter new unirouter address.
      */
@@ -1309,10 +1310,10 @@ contract StratManager is Ownable, Pausable {
 
     /**
      * @dev Updates beefy fee recipient.
-     * @param _beefyFeeRecipient new beefy fee recipient address.
+     * @param _feeRecipient new beefy fee recipient address.
      */
-    function setBeefyFeeRecipient(address _beefyFeeRecipient) external onlyOwner {
-        beefyFeeRecipient = _beefyFeeRecipient;
+    function setfeeRecipient(address _feeRecipient) external onlyOwner {
+        feeRecipient = _feeRecipient;
     }
 
     /**
@@ -1466,9 +1467,9 @@ contract StrategyScreamFTM is StratManager, FeeManager {
         if (_amount < minLeverage) { return; }
 
         for (uint i = 0; i < borrowDepth; i++) {
-            IVToken(iToken).mint(_amount);
+            assert(IVToken(iToken).mint(_amount) == 0);
             _amount = _amount.mul(borrowRate).div(100);
-            IVToken(iToken).borrow(_amount);
+            require(IVToken(iToken).borrow(_amount) == 0, "Enough collateral?");
         }
 
         reserves = reserves.add(_amount);
@@ -1487,20 +1488,20 @@ contract StrategyScreamFTM is StratManager, FeeManager {
         uint256 borrowBal = IVToken(iToken).borrowBalanceCurrent(address(this));
 
         while (wantBal < borrowBal) {
-            IVToken(iToken).repayBorrow(wantBal);
+            require(IVToken(iToken).repayBorrow(wantBal) == 0, "Something went wrong");
 
             borrowBal = IVToken(iToken).borrowBalanceCurrent(address(this));
             uint256 targetSupply = borrowBal.mul(100).div(borrowRate);
         
             uint256 supplyBal = IVToken(iToken).balanceOfUnderlying(address(this));
-            IVToken(iToken).redeemUnderlying(supplyBal.sub(targetSupply));
+            require(IVToken(iToken).redeemUnderlying(supplyBal.sub(targetSupply))==0, "Something went wrong");
             wantBal = IERC20(want).balanceOf(address(this));
         }
 
         IVToken(iToken).repayBorrow(uint256(-1));
         
         uint256 iTokenBal = IERC20(iToken).balanceOf(address(this));
-        IVToken(iToken).redeem(iTokenBal);
+        require(IVToken(iToken).redeem(iTokenBal) == 0, "something went wrong");;
 
         reserves = 0;
         
@@ -1518,13 +1519,13 @@ contract StrategyScreamFTM is StratManager, FeeManager {
         require(_borrowRate <= borrowRateMax, "!safe");
 
         uint256 wantBal = IERC20(want).balanceOf(address(this));
-        IVToken(iToken).repayBorrow(wantBal);
+        require(IVToken(iToken).repayBorrow(wantBal) == 0, "Something went wrong");
 
         uint256 borrowBal = IVToken(iToken).borrowBalanceCurrent(address(this));
         uint256 targetSupply = borrowBal.mul(100).div(_borrowRate);
         
         uint256 supplyBal = IVToken(iToken).balanceOfUnderlying(address(this));
-        IVToken(iToken).redeemUnderlying(supplyBal.sub(targetSupply));
+        require(IVToken(iToken).redeemUnderlying(supplyBal.sub(targetSupply)) == 0, "something went wrong");
         
         wantBal = IERC20(want).balanceOf(address(this));
         reserves = wantBal;
@@ -1554,8 +1555,7 @@ contract StrategyScreamFTM is StratManager, FeeManager {
     }
 
     // compounds earnings and charges performance fee
-    function harvest() public whenNotPaused {
-        require(tx.origin == msg.sender || msg.sender == vault, "!contract");
+    function harvest() public whenNotPaused onlyWhitelist{
         if (IComptroller(comptroller).pendingComptrollerImplementation() == address(0)) {
             IComptroller(comptroller).claimComp(address(this), markets);
             chargeFees();
