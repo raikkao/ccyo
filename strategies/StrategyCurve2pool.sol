@@ -31,20 +31,22 @@ contract StrategyCurveLP is StratManager, FeeManager {
     using SafeMath for uint256;
 
     // Tokens used
-    address public want; // curve lpToken
-    address public crv;
-    address public native;
-    address public depositToken;
+    address constant public want = 0x27e611fd27b276acbd5ffd632e5eaebec9761e40; // curve lpToken
+    address constant public crv = 0x1e4f97b9f9f913c46f1632781732927b9019c68b;
+    address constant public native = 0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83;
+    address constant public usdc = 0x04068da6c83afcfa0e13ba15a6696662335d5b75;
+    address constant public dai = 0x8d11ec38a3eb5e956b052f67da8bdc9bef8abf3e;
 
     // Third party contracts
-    address public rewardsGauge;
-    address public pool;
+    address constant public rewardsGauge = 0x8866414733f22295b7563f9c5299715d2d76caf4;
+    address constant public pool = 0x8866414733f22295b7563f9c5299715d2d76caf4;
     uint public poolSize;
     uint public depositIndex;
 
     // Routes
     address[] public crvToNativeRoute;
-    address[] public nativeToDepositRoute;
+    address[] public nativeToDAI;
+    address[] public nativeToUSDC;
 
     bool public harvestOnDeposit = true;
 
@@ -54,32 +56,22 @@ contract StrategyCurveLP is StratManager, FeeManager {
     event StratHarvest(address indexed harvester);
 
     constructor(
-        address _want,
-        address _gauge,
         address _pool,
         uint _poolSize,
-        uint _depositIndex,
-        address[] memory _crvToNativeRoute,
-        address[] memory _nativeToDepositRoute,
         address _vault,
         address _unirouter,
         address _keeper,
         address _whitelist,
         address _feeRecipient
     ) StratManager(_keeper, _whitelist, _unirouter, _vault, _feeRecipient) public {
-        want = _want;
-        rewardsGauge = _gauge;
-        pool = _pool;
         poolSize = _poolSize;
-        depositIndex = _depositIndex;
 
-        crv = _crvToNativeRoute[0];
-        native = _crvToNativeRoute[_crvToNativeRoute.length - 1];
-        crvToNativeRoute = _crvToNativeRoute;
+        nativeToUSDC = 
+        crvToNativeRoute = [crv, native];
+        nativeToDAI = [native, dai];
+        nativeToUSDC = [native, usdc];
 
         require(_nativeToDepositRoute[0] == native, '_nativeToDepositRoute[0] != native');
-        depositToken = _nativeToDepositRoute[_nativeToDepositRoute.length - 1];
-        nativeToDepositRoute = _nativeToDepositRoute;
 
         _giveAllowances();
     }
@@ -154,27 +146,21 @@ contract StrategyCurveLP is StratManager, FeeManager {
     // Adds liquidity to AMM and gets more LP tokens.
     function addLiquidity() internal {
         uint256 nativeBal = IERC20(native).balanceOf(address(this));
-        IUniswapRouterETH(unirouter).swapExactTokensForTokens(nativeBal, 0, nativeToDepositRoute, address(this), block.timestamp);
+        //IUniswapRouterETH(unirouter).swapExactTokensForTokens(nativeBal, 0, nativeToDepositRoute, address(this), block.timestamp);
 
-        uint256 depositBal = IERC20(depositToken).balanceOf(address(this));
+        uint256 balancePoolUSDC = IERC20(usdc).balanceOf(pool).mult(1e18).div(1e6);
+        uint256 balancePoolDAI = IERC20(dai).balanceOf(pool);
 
-        if (poolSize == 2) {
-            uint256[2] memory amounts;
-            amounts[depositIndex] = depositBal;
-            ICurveSwap2(pool).add_liquidity(amounts, 0);
-        } else if (poolSize == 3) {
-            uint256[3] memory amounts;
-            amounts[depositIndex] = depositBal;
-            ICurveSwap3(pool).add_liquidity(amounts, 0);
-        } else if (poolSize == 4) {
-            uint256[4] memory amounts;
-            amounts[depositIndex] = depositBal;
-            ICurveSwap4(pool).add_liquidity(amounts, 0);
-        } else if (poolSize == 5) {
-            uint256[5] memory amounts;
-            amounts[depositIndex] = depositBal;
-            ICurveSwap5(pool).add_liquidity(amounts, 0);
-        }
+        (address depositToken, 
+        uint256 depositIndex, 
+        address[] memory route) = balancePoolUSDC > balancePoolDAI ? (dai, 0, nativeToDAI) : (usdc, 1, nativeToUSDC);
+
+        IUniswapRouterETH(unirouter).swapExactTokensForTokens(nativeBal, 0, route, address(this), block.timestamp);
+
+        uint256[2] memory amounts;
+        amounts[depositIndex] = depositBal;
+        ICurveSwap2(pool).add_liquidity(amounts, 0);
+    
     }
 
     // calculate the total underlaying 'want' held by the strat.

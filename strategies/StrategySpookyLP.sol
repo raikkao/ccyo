@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 
 pragma solidity ^0.6.12;
 
@@ -121,16 +122,44 @@ contract StrategySpookyLP is StratManager, FeeManager {
 
     }
 
+
+  
+  function optimalDeposit(
+        uint amtA,
+        uint amtB,
+        uint resA,
+        uint resB
+    ) internal pure returns (uint) {
+        require(amtA.mul(resB) >= amtB.mul(resA), 'Reversed');
+        uint a = 997;
+        uint b = uint(1997).mul(resA);
+        uint _c = (amtA.mul(resB)).sub(amtB.mul(resA));
+        uint c = _c.mul(1000).div(amtB.add(resB)).mul(resA);
+        uint d = a.mul(c).mul(4);
+        uint e = HomoraMath.sqrt(b.mul(b).add(d));
+        uint numerator = e.sub(b);
+        uint denominator = a.mul(2);
+        return numerator.div(denominator);
+    }
+
+
     // Adds liquidity to AMM and gets more LP tokens.
     function addLiquidity() internal {
-        uint256 outputHalf = IERC20(output).balanceOf(address(this)).div(2);
+        uint256 balanceRewards = IERC20(output).balanceOf(address(this));
 
-        if (lpToken0 != output) {
-            IUniswapRouterETH(unirouter).swapExactTokensForTokens(outputHalf, 0, outputToLp0Route, address(this), now);
-        }
+        IUniswapRouterETH(unirouter).swapExactTokensForTokens(balanceRewards, 0, outputToLp0Route, address(this), now);
+        uint256 balanceToken0 = IERC20(token0).balance(address(this));
 
-        if (lpToken1 != output) {
-            IUniswapRouterETH(unirouter).swapExactTokensForTokens(outputHalf, 0, outputToLp1Route, address(this), now);
+        uint swapAmt;
+        (uint token0Reserve, uint token1Reserve, ) = IUniswapV2Pair(want).getReserves();
+        swapAmt = optimalDeposit(
+            balanceToken0,
+            0,
+            token0Reserve,
+            token1Reserve
+        );
+        if (swapAmt > 0) {
+            IUniswapRouterETH(unirouter).swapExactTokensForTokens(swapAmt, 0, [lpToken0, lpToken1], address(this), now);
         }
 
         uint256 lp0Bal = IERC20(lpToken0).balanceOf(address(this));

@@ -9,7 +9,6 @@ import "./lib/Ownable.sol";
 import "./lib/SafeMath.sol";
 import "./lib/Address.sol";
 import "./lib/SafeERC20.sol";
-import "./lib/ReentrancyGuard.sol";
 // File: contracts/BIFI/utils/LPTokenWrapper.sol
 
 
@@ -17,7 +16,7 @@ import "./lib/ReentrancyGuard.sol";
 
 
 
-contract LPTokenWrapper is ReentrancyGuard{
+contract LPTokenWrapper{
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -61,6 +60,7 @@ contract RewardPool is LPTokenWrapper, Ownable {
     uint256 public rewardRate = 0;
     uint256 public lastUpdateTime;
     uint256 public rewardPerTokenStored;
+    uint256 public immutable rate;
     mapping(address => uint256) public userRewardPerTokenPaid;
     mapping(address => uint256) public rewards;
 
@@ -69,11 +69,12 @@ contract RewardPool is LPTokenWrapper, Ownable {
     event Withdrawn(address indexed user, uint256 amount);
     event RewardPaid(address indexed user, uint256 reward);
 
-    constructor(address _stakedToken, address _rewardToken)
+    constructor(address _stakedToken, address _rewardToken, uint256 _rate)
         public
         LPTokenWrapper(_stakedToken)
     {
         rewardToken = IERC20(_rewardToken);
+        rate = _rate;
     }
 
     modifier updateReward(address account) {
@@ -99,7 +100,7 @@ contract RewardPool is LPTokenWrapper, Ownable {
                 lastTimeRewardApplicable()
                     .sub(lastUpdateTime)
                     .mul(rewardRate)
-                    .mul(1e18)
+                    .mul(rate)  
                     .div(totalSupply())
             );
     }
@@ -108,7 +109,7 @@ contract RewardPool is LPTokenWrapper, Ownable {
         return
             balanceOf(account)
                 .mul(rewardPerToken().sub(userRewardPerTokenPaid[account]))
-                .div(1e18)
+                .div(rate)
                 .add(rewards[account]);
     }
 
@@ -119,7 +120,7 @@ contract RewardPool is LPTokenWrapper, Ownable {
         emit Staked(msg.sender, amount);
     }
 
-    function withdraw(uint256 amount) public override nonReentrant updateReward(msg.sender) {
+    function withdraw(uint256 amount) public override updateReward(msg.sender) {
         require(amount > 0, "Cannot withdraw 0");
         super.withdraw(amount);
         emit Withdrawn(msg.sender, amount);
@@ -165,3 +166,4 @@ contract RewardPool is LPTokenWrapper, Ownable {
     }
 }
 
+contract RewardPoolFactory 

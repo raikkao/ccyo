@@ -31,20 +31,21 @@ contract StrategyCurveLP is StratManager, FeeManager {
     using SafeMath for uint256;
 
     // Tokens used
-    address public want; // curve lpToken
-    address public crv;
-    address public native;
-    address public depositToken;
+    address constant public want = 0x27e611fd27b276acbd5ffd632e5eaebec9761e40; // curve lpToken
+    address constant public crv = 0x1e4f97b9f9f913c46f1632781732927b9019c68b;
+    address constant public native = 0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83;
+    address constant public wbtc = 0x321162cd933e2be498cd2267a90534a804051b11 ;
+    address constant public renbtc = 0xdbf31df14b66535af65aac99c32e9ea844e14501;
 
     // Third party contracts
-    address public rewardsGauge;
-    address public pool;
+    address constant public rewardsGauge = 0xbdff0c27dd073c119ebcb1299a68a6a92ae607f0 ;
+    address constant public pool = 0x3ef6a01a0f81d6046290f3e2a8c5b843e738e604 ;
     uint public poolSize;
     uint public depositIndex;
 
     // Routes
     address[] public crvToNativeRoute;
-    address[] public nativeToDepositRoute;
+    address[] public nativeToWBTC;
 
     bool public harvestOnDeposit = true;
 
@@ -54,32 +55,21 @@ contract StrategyCurveLP is StratManager, FeeManager {
     event StratHarvest(address indexed harvester);
 
     constructor(
-        address _want,
-        address _gauge,
         address _pool,
         uint _poolSize,
-        uint _depositIndex,
-        address[] memory _crvToNativeRoute,
-        address[] memory _nativeToDepositRoute,
         address _vault,
         address _unirouter,
         address _keeper,
         address _whitelist,
         address _feeRecipient
     ) StratManager(_keeper, _whitelist, _unirouter, _vault, _feeRecipient) public {
-        want = _want;
-        rewardsGauge = _gauge;
-        pool = _pool;
         poolSize = _poolSize;
-        depositIndex = _depositIndex;
 
-        crv = _crvToNativeRoute[0];
-        native = _crvToNativeRoute[_crvToNativeRoute.length - 1];
-        crvToNativeRoute = _crvToNativeRoute;
+        nativeToUSDC = 
+        crvToNativeRoute = [crv, native];
+        nativeToWBTC = [native, wbtc];
 
         require(_nativeToDepositRoute[0] == native, '_nativeToDepositRoute[0] != native');
-        depositToken = _nativeToDepositRoute[_nativeToDepositRoute.length - 1];
-        nativeToDepositRoute = _nativeToDepositRoute;
 
         _giveAllowances();
     }
@@ -154,27 +144,15 @@ contract StrategyCurveLP is StratManager, FeeManager {
     // Adds liquidity to AMM and gets more LP tokens.
     function addLiquidity() internal {
         uint256 nativeBal = IERC20(native).balanceOf(address(this));
-        IUniswapRouterETH(unirouter).swapExactTokensForTokens(nativeBal, 0, nativeToDepositRoute, address(this), block.timestamp);
+        IUniswapRouterETH(unirouter).swapExactTokensForTokens(nativeBal, 0, nativeToWBTC , address(this), block.timestamp);
 
-        uint256 depositBal = IERC20(depositToken).balanceOf(address(this));
+        uint256 balancePoolWBTC = IERC20(wbtc).balanceOf(pool);
+        uint256 balancePoolrenBTC = IERC20(renbtc).balanceOf(pool);
 
-        if (poolSize == 2) {
-            uint256[2] memory amounts;
-            amounts[depositIndex] = depositBal;
-            ICurveSwap2(pool).add_liquidity(amounts, 0);
-        } else if (poolSize == 3) {
-            uint256[3] memory amounts;
-            amounts[depositIndex] = depositBal;
-            ICurveSwap3(pool).add_liquidity(amounts, 0);
-        } else if (poolSize == 4) {
-            uint256[4] memory amounts;
-            amounts[depositIndex] = depositBal;
-            ICurveSwap4(pool).add_liquidity(amounts, 0);
-        } else if (poolSize == 5) {
-            uint256[5] memory amounts;
-            amounts[depositIndex] = depositBal;
-            ICurveSwap5(pool).add_liquidity(amounts, 0);
-        }
+        uint256[2] memory amounts;
+        amounts[depositIndex] = depositBal;
+        ICurveSwap2(pool).add_liquidity(amounts, 0);
+    
     }
 
     // calculate the total underlaying 'want' held by the strat.

@@ -1,8 +1,6 @@
 
 // SPDX-License-Identifier: MIT
-
 pragma solidity ^0.6.12;
-
 
 import "../lib/Context.sol";
 import "../lib/Address.sol";
@@ -110,7 +108,7 @@ contract StratManager is Ownable, Pausable {
     function beforeDeposit() external virtual {}
 }
 
-pragma solidity ^0.6.12;
+
 
 abstract contract FeeManager is StratManager {
     uint constant public MAX_FEE = 1000;
@@ -122,7 +120,7 @@ abstract contract FeeManager is StratManager {
     uint public withdrawalFee = 10;
 
     uint public callFee = 111;
-    uint public ccdaoFee;
+    uint public ccdaoFee = MAX_FEE - callFee;
 
       /// @notice Value changed the variable with `name`
     event UpdatedUint256Slot(string indexed name, uint256 oldValue, uint256 newValue);
