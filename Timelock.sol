@@ -8,8 +8,7 @@
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.6.12;
-import "../interfaces/IMinter.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "./lib/ReentrancyGuard.sol";
 
 library SafeMath {
     /**
@@ -323,11 +322,4 @@ contract Timelock is ReentrancyGuard {
         return block.timestamp;
     }
 
-    //Added function to disable a minter with 0 delay in the event of an emergency
-    function disableMinter(address minter, address target) public nonReentrant {
-        require(msg.sender == admin, "Timelock::disableMinter: Call must come from admin.");
-
-        IMinter(minter).setMinter(target, false);
-        emit DisabledMinter(target);
-    }
 }

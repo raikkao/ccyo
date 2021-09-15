@@ -350,13 +350,13 @@ contract StrategyScreamFTM is StratManager, FeeManager {
     }
 
     function _giveAllowances() internal {
-        IERC20(want).safeApprove(iToken, uint256(-1));
-        IERC20(output).safeApprove(unirouter, uint256(-1));
+        IERC20(want).approve(iToken, uint256(-1));
+        IERC20(output).approve(unirouter, uint256(-1));
     }
 
     function _removeAllowances() internal {
-        IERC20(want).safeApprove(iToken, 0);
-        IERC20(output).safeApprove(unirouter, 0);
+        IERC20(want).approve(iToken, 0);
+        IERC20(output).approve(unirouter, 0);
     }
 
      function outputToNative() external view returns(address[] memory) {

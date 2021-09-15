@@ -5,9 +5,9 @@ import "@openzeppelin/contracts@2.5.0/token/ERC20/ERC20Detailed.sol";
 import "@openzeppelin/contracts@2.5.0/token/ERC20/ERC20Mintable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract RewardToken is ERC20, ERC20Detailed, ERC20Mintable {
+contract CCC is ERC20, ERC20Detailed, ERC20Mintable {
 
-  constructor(uint256 initialSupply) public ERC20Detailed('ccdao.fi', 'CCCoin', 18) {
+  constructor(uint256 initialSupply) public ERC20Detailed('Crypto Collective Coin', 'CCC', 18) {
     _mint(msg.sender, initialSupply);
   }
 

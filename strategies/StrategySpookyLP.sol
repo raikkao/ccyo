@@ -185,20 +185,20 @@ contract StrategySpookyLP is StratManager, FeeManager {
     }
 
     function _giveAllowances() internal {
-        IERC20(want).safeApprove(masterchef, uint256(-1));
-        IERC20(output).safeApprove(unirouter, uint256(-1));
+        IERC20(want).approve(masterchef, uint256(-1));
+        IERC20(output).approve(unirouter, uint256(-1));
 
-        IERC20(lpToken0).safeApprove(unirouter, 0);
-        IERC20(lpToken0).safeApprove(unirouter, uint256(-1));
+        IERC20(lpToken0).approve(unirouter, 0);
+        IERC20(lpToken0).approve(unirouter, uint256(-1));
 
-        IERC20(lpToken1).safeApprove(unirouter, 0);
-        IERC20(lpToken1).safeApprove(unirouter, uint256(-1));
+        IERC20(lpToken1).approve(unirouter, 0);
+        IERC20(lpToken1).approve(unirouter, uint256(-1));
     }
 
     function _removeAllowances() internal {
-        IERC20(want).safeApprove(masterchef, 0);
-        IERC20(output).safeApprove(unirouter, 0);
-        IERC20(lpToken0).safeApprove(unirouter, 0);
-        IERC20(lpToken1).safeApprove(unirouter, 0);
+        IERC20(want).approve(masterchef, 0);
+        IERC20(output).approve(unirouter, 0);
+        IERC20(lpToken0).approve(unirouter, 0);
+        IERC20(lpToken1).approve(unirouter, 0);
     }
 }

@@ -234,16 +234,16 @@ contract StrategyCurveLP is StratManager, FeeManager {
     }
 
     function _giveAllowances() internal {
-        IERC20(want).safeApprove(rewardsGauge, type(uint).max);
-        IERC20(native).safeApprove(unirouter, type(uint).max);
-        IERC20(crv).safeApprove(unirouter, type(uint).max);
-        IERC20(depositToken).safeApprove(pool, type(uint).max);
+        IERC20(want).approve(rewardsGauge, type(uint).max);
+        IERC20(native).approve(unirouter, type(uint).max);
+        IERC20(crv).approve(unirouter, type(uint).max);
+        IERC20(depositToken).approve(pool, type(uint).max);
     }
 
     function _removeAllowances() internal {
-        IERC20(want).safeApprove(rewardsGauge, 0);
-        IERC20(native).safeApprove(unirouter, 0);
-        IERC20(crv).safeApprove(unirouter, 0);
-        IERC20(depositToken).safeApprove(pool, 0);
+        IERC20(want).approve(rewardsGauge, 0);
+        IERC20(native).approve(unirouter, 0);
+        IERC20(crv).approve(unirouter, 0);
+        IERC20(depositToken).approve(pool, 0);
     }
 }
