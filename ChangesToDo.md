@@ -21,6 +21,7 @@
     - Added the necessary return codes to the code
 
 - the Spooky strategy should use the Alpha Homora V2 algorithm for optimal one sided liquidity (important note: the article actually contains an incorrect implementation of it perhaps to mislead users, you can find the actual one in the post's links as well as Alpha Homora V2 deployment)
+    - Done
 
 - the Curve strategy should try to deposit the most lucrative asset via balance measurements(edited)
 

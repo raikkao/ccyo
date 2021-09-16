@@ -31,17 +31,16 @@ contract StrategyCurveLP is StratManager, FeeManager {
     using SafeMath for uint256;
 
     // Tokens used
-    address constant public want = 0x27e611fd27b276acbd5ffd632e5eaebec9761e40; // curve lpToken
-    address constant public crv = 0x1e4f97b9f9f913c46f1632781732927b9019c68b;
-    address constant public native = 0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83;
-    address constant public usdc = 0x04068da6c83afcfa0e13ba15a6696662335d5b75;
-    address constant public dai = 0x8d11ec38a3eb5e956b052f67da8bdc9bef8abf3e;
+    address constant public want = 0x27E611FD27b276ACbd5Ffd632E5eAEBEC9761E40; // curve lpToken
+    address constant public crv =0x1E4F97b9f9F913c46F1632781732927B9019C68b;
+    address constant public native = 0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83;
+    address constant public usdc = 0x04068DA6C83AFCFA0e13ba15A6696662335D5B75;
+    address constant public dai = 0x8D11eC38a3EB5E956B052f67Da8Bdc9bef8Abf3E;
 
     // Third party contracts
-    address constant public rewardsGauge = 0x8866414733f22295b7563f9c5299715d2d76caf4;
-    address constant public pool = 0x8866414733f22295b7563f9c5299715d2d76caf4;
+    address constant public rewardsGauge = 0x8866414733F22295b7563f9C5299715D2D76CAf4;
+    address constant public pool = 0x27E611FD27b276ACbd5Ffd632E5eAEBEC9761E40   ;
     uint public poolSize;
-    uint public depositIndex;
 
     // Routes
     address[] public crvToNativeRoute;
@@ -56,7 +55,6 @@ contract StrategyCurveLP is StratManager, FeeManager {
     event StratHarvest(address indexed harvester);
 
     constructor(
-        address _pool,
         uint _poolSize,
         address _vault,
         address _unirouter,
@@ -66,12 +64,9 @@ contract StrategyCurveLP is StratManager, FeeManager {
     ) StratManager(_keeper, _whitelist, _unirouter, _vault, _feeRecipient) public {
         poolSize = _poolSize;
 
-        nativeToUSDC = 
         crvToNativeRoute = [crv, native];
         nativeToDAI = [native, dai];
         nativeToUSDC = [native, usdc];
-
-        require(_nativeToDepositRoute[0] == native, '_nativeToDepositRoute[0] != native');
 
         _giveAllowances();
     }
@@ -148,7 +143,7 @@ contract StrategyCurveLP is StratManager, FeeManager {
         uint256 nativeBal = IERC20(native).balanceOf(address(this));
         //IUniswapRouterETH(unirouter).swapExactTokensForTokens(nativeBal, 0, nativeToDepositRoute, address(this), block.timestamp);
 
-        uint256 balancePoolUSDC = IERC20(usdc).balanceOf(pool).mult(1e18).div(1e6);
+        uint256 balancePoolUSDC = IERC20(usdc).balanceOf(pool).mul(1e18).div(1e6);
         uint256 balancePoolDAI = IERC20(dai).balanceOf(pool);
 
         (address depositToken, 
@@ -156,6 +151,7 @@ contract StrategyCurveLP is StratManager, FeeManager {
         address[] memory route) = balancePoolUSDC > balancePoolDAI ? (dai, 0, nativeToDAI) : (usdc, 1, nativeToUSDC);
 
         IUniswapRouterETH(unirouter).swapExactTokensForTokens(nativeBal, 0, route, address(this), block.timestamp);
+        uint256 depositBal = IERC20(depositToken).balanceOf(address(this));
 
         uint256[2] memory amounts;
         amounts[depositIndex] = depositBal;
@@ -182,9 +178,6 @@ contract StrategyCurveLP is StratManager, FeeManager {
         return crvToNativeRoute;
     }
 
-    function nativeToDeposit() external view returns(address[] memory) {
-        return nativeToDepositRoute;
-    }
 
     function setHarvestOnDeposit(bool _harvest) external onlyManager {
         harvestOnDeposit = _harvest;
@@ -224,13 +217,16 @@ contract StrategyCurveLP is StratManager, FeeManager {
         IERC20(want).approve(rewardsGauge, type(uint).max);
         IERC20(native).approve(unirouter, type(uint).max);
         IERC20(crv).approve(unirouter, type(uint).max);
-        IERC20(depositToken).approve(pool, type(uint).max);
+        IERC20(dai).approve(pool, type(uint).max);
+        IERC20(usdc).approve(pool, type(uint).max);
     }
 
     function _removeAllowances() internal {
         IERC20(want).approve(rewardsGauge, 0);
         IERC20(native).approve(unirouter, 0);
         IERC20(crv).approve(unirouter, 0);
-        IERC20(depositToken).approve(pool, 0);
+        IERC20(dai).approve(pool, 0);
+        IERC20(usdc).approve(pool, 0);
+
     }
 }

@@ -5,6 +5,7 @@ pragma solidity ^0.6.12;
 import "../lib/SafeERC20.sol";
 import "../lib/SafeMath.sol";
 import "../lib/Address.sol";
+import "../lib/Math.sol";
 import "../interfaces/IUniswapRouterETH.sol";
 import "../interfaces/IUniswapV2Pair.sol";
 import "../interfaces/IMasterChef.sol";
@@ -136,7 +137,7 @@ contract StrategySpookyLP is StratManager, FeeManager {
         uint _c = (amtA.mul(resB)).sub(amtB.mul(resA));
         uint c = _c.mul(1000).div(amtB.add(resB)).mul(resA);
         uint d = a.mul(c).mul(4);
-        uint e = HomoraMath.sqrt(b.mul(b).add(d));
+        uint e = Math.sqrt(b.mul(b).add(d));
         uint numerator = e.sub(b);
         uint denominator = a.mul(2);
         return numerator.div(denominator);
@@ -148,7 +149,7 @@ contract StrategySpookyLP is StratManager, FeeManager {
         uint256 balanceRewards = IERC20(output).balanceOf(address(this));
 
         IUniswapRouterETH(unirouter).swapExactTokensForTokens(balanceRewards, 0, outputToLp0Route, address(this), now);
-        uint256 balanceToken0 = IERC20(token0).balance(address(this));
+        uint256 balanceToken0 = IERC20(lpToken0).balanceOf(address(this));
 
         uint swapAmt;
         (uint token0Reserve, uint token1Reserve, ) = IUniswapV2Pair(want).getReserves();
@@ -159,7 +160,9 @@ contract StrategySpookyLP is StratManager, FeeManager {
             token1Reserve
         );
         if (swapAmt > 0) {
-            IUniswapRouterETH(unirouter).swapExactTokensForTokens(swapAmt, 0, [lpToken0, lpToken1], address(this), now);
+            address[] memory path;
+            (path[0], path[1]) = (lpToken0, lpToken1);
+            IUniswapRouterETH(unirouter).swapExactTokensForTokens(swapAmt, 0, path, address(this), now);
         }
 
         uint256 lp0Bal = IERC20(lpToken0).balanceOf(address(this));

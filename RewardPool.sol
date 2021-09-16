@@ -165,5 +165,3 @@ contract RewardPool is LPTokenWrapper, Ownable {
         IERC20(_token).safeTransfer(msg.sender, amount);
     }
 }
-
-contract RewardPoolFactory 
