@@ -51,7 +51,7 @@ contract StratManager is Ownable, Pausable {
 
     // checks that caller is either owner or keeper.
     modifier onlyWhitelist() {
-        require(msg.sender == owner() || msg.sender == keeper || IWhitelist(keeper).isWhitelisted(msg.sender), "!manager");
+        require(msg.sender == owner() || msg.sender == keeper || IWhitelist(whitelist).isWhitelisted(msg.sender), "!manager");
         _;
     }
 
